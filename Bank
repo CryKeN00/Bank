@@ -1,0 +1,79 @@
+namespace Банк1
+{
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            var account = new BankAccount(); //Создание объекта класс BankAccount для управления балансом
+            int rAmount = 100; //Сумма нужная для снятия денег со счета.
+            var depositThread = new Thread(() => //Создание потока для пополнения счета
+            {
+                var random = new Random(); //Генерация случайных чисел
+                for (int i = 0; i < 3; i++) //Пополняем баланс 3 раза на 3 рандомные суммы
+                {
+                    {
+                        account.Popolnenie(random.Next(5, 30)); //Вызов метода с пополнением счета
+                        Thread.Sleep(1000); //Приостановка выполнения потока на 1 секунду
+                    }
+                }
+
+            });
+            depositThread.Start(); //Запуск потока
+            account.WaitBalance(rAmount);  //Ожидание нужного для снятия денег баланса
+            if (account.TryWithdraw(rAmount))  //Попытка снятия средств
+            {
+                Console.WriteLine($"Остаток баланса: " + account.balance);
+            }
+        }
+    }
+    class BankAccount //Создание класса для создания банковского счета
+    {
+        public int balance; //Баланс
+        private readonly object balanceLock = new(); //Объект для блокировки доступа к полю баланса
+
+        public BankAccount() //Конструктор
+        {
+            this.balance = 0;
+        }
+
+        public void Popolnenie(int amount) //Метод для пополнения счета
+        {
+            lock (balanceLock) //Использование блокировки для безопасного доступа к балансу из разных потоков
+            {
+                balance += amount; //Увеличение баланса на пополненную сумму
+                Console.WriteLine($"Пополнение: {amount:C}, Ваш баланс: {balance:C}"); 
+            }
+        }
+
+        public void WaitBalance(int rAmount) //Метод ожидания нужного для снятия средств баланса
+        {
+            while (true) //Бесконечный цикл, который закончится, как только метод вернется
+            {
+                lock (balanceLock) //Использование блокировки для безопасного доступа к балансу из разных потоков
+                {
+                    if (balance >= rAmount) //Проверяем, достаточно ли средств для снятия
+                    {
+                        Console.WriteLine("У вас достаточно денег для снятия");
+                        return;
+                    }
+                }
+                Thread.Sleep(300); //Приостановка потока, если средств недостаточно
+            }
+        }
+
+        public bool TryWithdraw(int amount) //Метод для попытки снятия
+        {
+            lock (balanceLock) //Использование блокировки для безопасного доступа к балансу из разных потоков
+            {
+                if (balance >= amount) //Проверка, достаточно ли средств для снятия
+                {
+                    balance -= amount; //Вычитание из баланса снятой суммы
+                    Console.WriteLine($"Снятие средств:{amount:C}, Ваш баланс:{balance:C}");
+                    return true; //true если снятие прошло успешно
+                }
+                Console.WriteLine("У вас недостаточно средств для снятия данной суммы.");
+                return false; //false если неуспешно
+            }
+        }
+    }
+}
